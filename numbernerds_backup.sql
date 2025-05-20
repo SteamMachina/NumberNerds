@@ -43,13 +43,50 @@ LOCK TABLES `befriend` WRITE;
 INSERT INTO `befriend` VALUES
 (1,2,0.00),
 (1,3,0.00),
-(1,4,0.00),
 (2,3,0.00),
 (4,5,0.00),
 (4,7,0.00),
 (5,6,0.00),
 (6,7,0.00);
 /*!40000 ALTER TABLE `befriend` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `categories`
+--
+
+DROP TABLE IF EXISTS `categories`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `categories` (
+  `name` varchar(50) NOT NULL,
+  PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `categories`
+--
+
+LOCK TABLES `categories` WRITE;
+/*!40000 ALTER TABLE `categories` DISABLE KEYS */;
+INSERT INTO `categories` VALUES
+('Dining'),
+('Education'),
+('Entertainment'),
+('Groceries'),
+('Health'),
+('Insurance'),
+('Other'),
+('Pets'),
+('Rent'),
+('Salary'),
+('Shopping'),
+('Subscriptions'),
+('Transport'),
+('Travel'),
+('Utilities');
+/*!40000 ALTER TABLE `categories` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -64,12 +101,14 @@ CREATE TABLE `operations` (
   `amount` decimal(10,2) NOT NULL,
   `category` varchar(50) NOT NULL,
   `label` varchar(50) NOT NULL,
-  `date` datetime NOT NULL,
+  `date` date NOT NULL,
   `payer_id` int(11) NOT NULL,
   PRIMARY KEY (`operation_id`),
   KEY `payer_id` (`payer_id`),
-  CONSTRAINT `operations_ibfk_1` FOREIGN KEY (`payer_id`) REFERENCES `users` (`user_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  KEY `category` (`category`),
+  CONSTRAINT `operations_ibfk_1` FOREIGN KEY (`payer_id`) REFERENCES `users` (`user_id`),
+  CONSTRAINT `operations_ibfk_2` FOREIGN KEY (`category`) REFERENCES `categories` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -79,14 +118,17 @@ CREATE TABLE `operations` (
 LOCK TABLES `operations` WRITE;
 /*!40000 ALTER TABLE `operations` DISABLE KEYS */;
 INSERT INTO `operations` VALUES
-(1,50.00,'Groceries','Supermarket','2024-05-01 10:00:00',1),
-(2,30.00,'Transport','Gas','2024-05-02 15:30:00',2),
-(3,80.00,'Dining','Restaurant','2024-05-03 19:00:00',3),
-(4,45.00,'Entertainment','Cinema','2024-05-04 20:00:00',4),
-(5,120.00,'Shopping','Electronics','2024-05-05 14:20:00',5),
-(6,25.50,'Food','Pizza','2024-05-06 19:45:00',6),
-(7,60.00,'Sports','Gym Equipment','2024-05-07 11:30:00',7),
-(8,90.00,'Utilities','Internet Bill','2024-05-08 09:15:00',4);
+(1,50.00,'Groceries','Supermarket','2024-05-01',1),
+(2,30.00,'Transport','Gas','2024-05-02',2),
+(3,80.00,'Dining','Restaurant','2024-05-03',3),
+(4,45.00,'Entertainment','Cinema','2024-05-04',4),
+(5,60.00,'Shopping','Market','2024-05-05',5),
+(6,25.00,'Health','Pharmacy','2024-05-06',2),
+(7,100.00,'Rent','Monthly Rent','2024-05-07',3),
+(8,15.00,'Subscriptions','Music Service','2024-05-08',4),
+(9,40.00,'Pets','Vet Visit','2024-05-09',5),
+(10,1200.00,'Salary','Monthly Salary','2024-05-10',1),
+(11,25.00,'other','qdfq','2025-04-01',1);
 /*!40000 ALTER TABLE `operations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -98,12 +140,12 @@ DROP TABLE IF EXISTS `shares`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `shares` (
-  `user_id` int(11) NOT NULL,
+  `receiver_id` int(11) NOT NULL,
   `operation_id` int(11) NOT NULL,
   `percentage` tinyint(4) NOT NULL,
-  PRIMARY KEY (`user_id`,`operation_id`),
+  PRIMARY KEY (`receiver_id`,`operation_id`),
   KEY `operation_id` (`operation_id`),
-  CONSTRAINT `shares_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
+  CONSTRAINT `shares_ibfk_1` FOREIGN KEY (`receiver_id`) REFERENCES `users` (`user_id`),
   CONSTRAINT `shares_ibfk_2` FOREIGN KEY (`operation_id`) REFERENCES `operations` (`operation_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -122,14 +164,9 @@ INSERT INTO `shares` VALUES
 (3,2,40),
 (3,3,70),
 (4,4,70),
-(4,7,45),
-(4,8,100),
 (5,4,30),
 (5,5,50),
-(6,5,50),
-(6,6,40),
-(7,6,60),
-(7,7,55);
+(6,5,50);
 /*!40000 ALTER TABLE `shares` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -177,4 +214,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-05-20 17:01:31
+-- Dump completed on 2025-05-20 21:58:40
