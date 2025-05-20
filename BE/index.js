@@ -8,6 +8,10 @@ const express = require('express'); // import express
 const mysql = require('mysql2'); // import mysql2
 const app = express(); // create an express app
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+
 const port = process.env.PORT || 3000; // port to listen on
 
 // create a connection to the database
@@ -52,7 +56,7 @@ app.get('/users', (req, res) => {
 app.post('/befriend', (req, res) => {
   const {user_id, friend_id} = req.body;
   // Check if friend_id exists in the database
-  db.query('SELECT * FROM users WHERE id = ?', [friend_id], (err, results) => {
+  db.query('SELECT * FROM users WHERE user_id = ?', [friend_id], (err, results) => {
     if (err) {
       console.error('Error retrieving user:', err);
       res.status(500).send('Server error');
