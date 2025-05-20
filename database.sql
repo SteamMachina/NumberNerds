@@ -13,22 +13,27 @@ CREATE TABLE users (
    total_money DECIMAL(10,2) NOT NULL
 );
 
+CREATE TABLE categories (
+   name VARCHAR(50) PRIMARY KEY
+);
+
 CREATE TABLE operations (
    operation_id INT PRIMARY KEY AUTO_INCREMENT,
    amount DECIMAL(10,2) NOT NULL,
    category VARCHAR(50) NOT NULL,
    label VARCHAR(50) NOT NULL,
-   date DATETIME NOT NULL,
+   date DATE NOT NULL,
    payer_id INT NOT NULL,
-   FOREIGN KEY (payer_id) REFERENCES users(user_id)
+   FOREIGN KEY (payer_id) REFERENCES users(user_id),
+   FOREIGN KEY (category) REFERENCES categories(name)
 );
 
 CREATE TABLE shares (
-   user_id INT,
+   receiver_id INT,
    operation_id INT,
    percentage TINYINT NOT NULL,
-   PRIMARY KEY (user_id, operation_id),
-   FOREIGN KEY (user_id) REFERENCES users(user_id),
+   PRIMARY KEY (receiver_id, operation_id),
+   FOREIGN KEY (receiver_id) REFERENCES users(user_id),
    FOREIGN KEY (operation_id) REFERENCES operations(operation_id)
 );
 
@@ -55,19 +60,39 @@ INSERT INTO users (email, password_hash, name, total_money) VALUES
 ('frank@example.com', 'hash_frank', 'Frank', 180.00),
 ('grace@example.com', 'hash_grace', 'Grace', 225.50);
 
--- Insert fake operations
+-- Insert categories
+INSERT INTO categories (name) VALUES
+('Groceries'),
+('Transport'),
+('Dining'),
+('Utilities'),
+('Entertainment'),
+('Shopping'),
+('Health'),
+('Education'),
+('Travel'),
+('Insurance'),
+('Rent'),
+('Subscriptions'),
+('Pets'),
+('Salary'),
+('Other');
+
+-- Insert fake operations (use only the above categories)
 INSERT INTO operations (amount, category, label, date, payer_id) VALUES
-(50.00, 'Groceries', 'Supermarket', '2024-05-01 10:00:00', 1),
-(30.00, 'Transport', 'Gas', '2024-05-02 15:30:00', 2),
-(80.00, 'Dining', 'Restaurant', '2024-05-03 19:00:00', 3),
-(45.00, 'Entertainment', 'Cinema', '2024-05-04 20:00:00', 4),
-(120.00, 'Shopping', 'Electronics', '2024-05-05 14:20:00', 5),
-(25.50, 'Food', 'Pizza', '2024-05-06 19:45:00', 6),
-(60.00, 'Sports', 'Gym Equipment', '2024-05-07 11:30:00', 7),
-(90.00, 'Utilities', 'Internet Bill', '2024-05-08 09:15:00', 4);
+(50.00, 'Groceries', 'Supermarket', '2024-05-01', 1),
+(30.00, 'Transport', 'Gas', '2024-05-02', 2),
+(80.00, 'Dining', 'Restaurant', '2024-05-03', 3),
+(45.00, 'Entertainment', 'Cinema', '2024-05-04', 4),
+(60.00, 'Shopping', 'Market', '2024-05-05', 5),
+(25.00, 'Health', 'Pharmacy', '2024-05-06', 2),
+(100.00, 'Rent', 'Monthly Rent', '2024-05-07', 3),
+(15.00, 'Subscriptions', 'Music Service', '2024-05-08', 4),
+(40.00, 'Pets', 'Vet Visit', '2024-05-09', 5),
+(1200.00, 'Salary', 'Monthly Salary', '2024-05-10', 1);
 
 -- Insert fake shares
-INSERT INTO shares (user_id, operation_id, percentage) VALUES
+INSERT INTO shares (receiver_id, operation_id, percentage) VALUES
 (1, 1, 50),
 (2, 1, 50),
 (2, 2, 60),
@@ -77,12 +102,7 @@ INSERT INTO shares (user_id, operation_id, percentage) VALUES
 (4, 4, 70),
 (5, 4, 30),
 (5, 5, 50),
-(6, 5, 50),
-(6, 6, 40),
-(7, 6, 60),
-(4, 7, 45),
-(7, 7, 55),
-(4, 8, 100);
+(6, 5, 50);
 
 -- Insert fake friendships
 INSERT INTO befriend (user_id, friend_id) VALUES
@@ -93,4 +113,3 @@ INSERT INTO befriend (user_id, friend_id) VALUES
 (5, 6),
 (6, 7),
 (4, 7);
-
