@@ -33,11 +33,12 @@ CREATE TABLE shares (
 );
 
 CREATE TABLE befriend (
-   sender_id INT,
-   receiver_id INT,
-   PRIMARY KEY (sender_id, receiver_id),
-   FOREIGN KEY (sender_id) REFERENCES users(user_id),
-   FOREIGN KEY (receiver_id) REFERENCES users(user_id)
+   user_id INT,
+   friend_id INT,
+   owed_money DECIMAL(10,2) DEFAULT 0.00,
+   PRIMARY KEY (user_id, friend_id),
+   FOREIGN KEY (user_id) REFERENCES users(user_id),
+   FOREIGN KEY (friend_id) REFERENCES users(user_id)
 );
 
 ----------------------------
@@ -66,7 +67,7 @@ INSERT INTO shares (user_id, operation_id, percentage) VALUES
 (3, 3, 70);
 
 -- Insert fake friendships
-INSERT INTO befriend (sender_id, receiver_id) VALUES
+INSERT INTO befriend (user_id, friend_id) VALUES
 (1, 2),
 (2, 3),
 (1, 3);
