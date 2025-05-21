@@ -106,10 +106,10 @@ INSERT INTO shares (receiver_id, operation_id, percentage) VALUES
 
 -- Insert fake friendships
 INSERT INTO befriend (user_id, friend_id) VALUES
-(1, 2),
-(2, 3),
-(1, 3),
-(4, 5),
-(5, 6),
-(6, 7),
-(4, 7);
+(1, 2), (2, 1),
+(2, 3), (3, 2),
+(1, 3), (3, 1),
+(4, 5), (5, 4),
+(5, 6), (6, 5),
+(6, 7), (7, 6),
+(4, 7), (7, 4);

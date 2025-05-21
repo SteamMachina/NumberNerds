@@ -40,9 +40,9 @@ app.get('/', (req, res) => {
   res.send('Hello World!');
 });
 
-// Add a new friendship
+// Add a new friendship (bidirectional)
 app.post('/befriend', (req, res) => {
-  const {user_id, friend_id} = req.body;
+  const { user_id, friend_id } = req.body;
   // Check if friend_id exists in the database
   db.query('SELECT * FROM users WHERE user_id = ?', [friend_id], (err, results) => {
     if (err) {
@@ -51,29 +51,33 @@ app.post('/befriend', (req, res) => {
     } else if (results.length === 0) {
       res.status(404).send('User not found');
     } else {
-      // Check if the user is already a friend
-      db.query('SELECT * FROM befriend WHERE user_id = ? AND friend_id = ?', [user_id, friend_id], (err, results) => {
-        if (err) {
-          console.error('Error checking if friendship exists:', err);
-          res.status(500).send('Server error');
-        } else {
-          // If friendship doesn't already exist
-          if (results.length === 0) {
-            // Add friendship to the database
-            db.query('INSERT INTO befriend (user_id, friend_id) VALUES (?, ?)', [user_id, friend_id], (err, results) => {
-              if (err) {
-                console.error('Error befriending user:', err);
-                res.status(500).send('Server error');
-              } else {
-                res.status(204).send('User befriended successfully');
+      // Check if the friendship already exists in either direction
+      db.query(
+        'SELECT * FROM befriend WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)',
+        [user_id, friend_id, friend_id, user_id],
+        (err, results) => {
+          if (err) {
+            console.error('Error checking if friendship exists:', err);
+            res.status(500).send('Server error');
+          } else if (results.length === 0) {
+            // Add friendship in both directions
+            db.query(
+              'INSERT INTO befriend (user_id, friend_id) VALUES (?, ?), (?, ?)',
+              [user_id, friend_id, friend_id, user_id],
+              (err, results) => {
+                if (err) {
+                  console.error('Error befriending user:', err);
+                  res.status(500).send('Server error');
+                } else {
+                  res.status(204).send('Users befriended successfully');
+                }
               }
-            });
+            );
           } else {
-            // If friendship already exists
             res.status(200).send('Friendship already exists');
           }
         }
-      });
+      );
     }
   });
 });
