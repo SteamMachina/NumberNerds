@@ -265,6 +265,115 @@ app.post('/operations', (req, res) => {
   });
 });
 
+// Delete an operation
+app.delete('/operations/:operation_id', (req, res) => {
+  const { operation_id } = req.params;
+  // Check if operation exists
+  db.query('SELECT * FROM operations WHERE operation_id = ?', [operation_id], (err, results) => {
+    if (err) {
+      console.error('Error checking if operation exists:', err);
+      res.status(500).send('Server error');
+    } else if (results.length === 0) {
+      res.status(404).send('Operation not found');
+    } else {
+      // Delete operation from shares table
+      db.query('DELETE FROM shares WHERE operation_id = ?', [operation_id], (err, results) => {
+        if (err) {
+          console.error('Error deleting operation from shares:', err);
+          res.status(500).send('Server error');
+        } else {
+          // Delete operation from the operations table
+          db.query('DELETE FROM operations WHERE operation_id = ?', [operation_id], (err, results) => {
+            if (err) {
+              console.error('Error deleting operation:', err);
+              res.status(500).send('Server error');
+            } else {
+              res.status(200).send('Operation deleted successfully');
+            }
+          });
+        }
+      });
+    }
+  });
+});
+
+// Create a new share
+app.post('/shares', (req, res) => {
+  const { operation_id, receiver_id, percentage } = req.body;
+  // Check if operation_id exists in the database
+  db.query('SELECT * FROM operations WHERE operation_id = ?', [operation_id], (err, results) => {
+    if (err) {
+      console.error('Error retrieving operation:', err);
+      res.status(500).send('Server error');
+    } else if (results.length === 0) {
+      res.status(404).send('Operation not found');
+    } else {
+      // Check if receiver_id exists in the database
+      db.query('SELECT * FROM users WHERE user_id = ?', [receiver_id], (err, results) => {
+        if (err) {
+          console.error('Error retrieving user:', err);
+          res.status(500).send('Server error');
+        } else if (results.length === 0) {
+          res.status(404).send('User not found');
+        } else {
+          // Add share to the database
+          db.query(
+            'INSERT INTO shares (operation_id, receiver_id, percentage) VALUES (?, ?, ?)',
+            [operation_id, receiver_id, percentage],
+            (err, results) => {
+              if (err) {
+                console.error('Error adding share:', err);
+                res.status(500).send('Server error');
+              } else {
+                res.status(201).send('Share added successfully');
+                const query = `
+                  UPDATE befriend b
+                  JOIN (
+                    SELECT
+                      s.receiver_id AS user_id,
+                      o.payer_id AS friend_id,
+                      SUM(s.percentage / 100 * o.amount) AS total_owed
+                    FROM shares s
+                    JOIN operations o ON s.operation_id = o.operation_id
+                    GROUP BY s.receiver_id, o.payer_id
+                  ) calc ON b.user_id = calc.user_id AND b.friend_id = calc.friend_id
+                  SET b.owed_money = calc.total_owed
+                `;
+                db.query(query, (err, results) => {
+                  if (err) {
+                    console.error('Error updating owed money:', err);
+                  } else {
+                    console.log('Owed money updated successfully');
+                  }
+                });
+              }
+            }
+          );
+        }
+      });
+    }
+  });
+});
+
+// Display owed money with friends
+app.get('/owed_money/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const query = `
+    SELECT b.friend_id, u.name AS friend_name, b.owed_money
+    FROM befriend b
+    JOIN users u ON b.friend_id = u.user_id
+    WHERE b.user_id = ?;`;
+
+  db.query(query, [user_id], (err, results) => {
+    if (err) {
+      console.error('Error retrieving owed money:', err);
+      res.status(500).send('Server error');
+    } else {
+      res.json(results);
+    }
+  });
+});
+
 /************** */
 /* START SERVER */
 /************** */
