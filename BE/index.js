@@ -330,26 +330,32 @@ app.post('/shares', (req, res) => {
                 res.status(500).send('Server error');
               } else {
                 res.status(201).send('Share added successfully');
-                const query = `
-                  UPDATE befriend b
-                  JOIN (
-                    SELECT
-                      s.receiver_id AS user_id,
-                      o.payer_id AS friend_id,
-                      SUM(s.percentage / 100 * o.amount) AS total_owed
-                    FROM shares s
-                    JOIN operations o ON s.operation_id = o.operation_id
-                    GROUP BY s.receiver_id, o.payer_id
-                  ) calc ON b.user_id = calc.user_id AND b.friend_id = calc.friend_id
-                  SET b.owed_money = calc.total_owed
+                const updateOwedMoney = `
+                  UPDATE befriend
+                  SET owed_money = owed_money + (? / 100 * ?)
+                  WHERE user_id = ? AND friend_id = (
+                    SELECT payer_id FROM operations WHERE operation_id = ?
+                  );
+
+                  UPDATE befriend b1
+                  JOIN befriend b2 ON b1.user_id = b2.friend_id AND b1.friend_id = b2.user_id
+                  SET b2.owed_money = -b1.owed_money
+                  WHERE b1.user_id = ? AND b1.friend_id = (
+                    SELECT payer_id FROM operations WHERE operation_id = ?
+                  );
                 `;
-                db.query(query, (err, results) => {
-                  if (err) {
-                    console.error('Error updating owed money:', err);
-                  } else {
-                    console.log('Owed money updated successfully');
+
+                db.query(
+                  updateOwedMoney,
+                  [percentage, operation_amount, receiver_id, operation_id, receiver_id, operation_id],
+                  (err, results) => {
+                    if (err) {
+                      console.error('Error updating owed money:', err);
+                    } else {
+                      console.log('Owed money incremented successfully (both directions)');
+                    }
                   }
-                });
+                );
               }
             }
           );
