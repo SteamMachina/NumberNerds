@@ -123,19 +123,6 @@ app.get('/friends/:user_id', (req, res) => {
   });
 });
 
-// Display all operations of a user
-app.get('/operations/:payer_id', (req, res) => {
-  const { payer_id } = req.params;
-  db.query('SELECT * FROM operations WHERE payer_id = ?', [payer_id], (err, results) => {
-    if (err) {
-      console.error('Error retrieving operations:', err);
-      res.status(500).send('Server error');
-    } else {
-      res.json(results);
-    }
-  });
-});
-
 // Display all shared operations with a specific friend
 app.get('/operations/shared/:user_id/:receiver_id', (req, res) => {
   const { user_id, receiver_id } = req.params;
@@ -330,6 +317,7 @@ app.post('/shares', (req, res) => {
                 res.status(500).send('Server error');
               } else {
                 res.status(201).send('Share added successfully');
+                // Update owed money for both users
                 const updateOwedMoney = `
                   UPDATE befriend
                   SET owed_money = owed_money + (? / 100 * ?)
@@ -377,6 +365,26 @@ app.get('/owed_money/:user_id', (req, res) => {
   db.query(query, [user_id], (err, results) => {
     if (err) {
       console.error('Error retrieving owed money:', err);
+      res.status(500).send('Server error');
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+// Display all operations of a user, including operations shared with the user
+app.get('/operations/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const query = `
+    SELECT * FROM operations WHERE payer_id = ?
+    UNION
+    SELECT o.* FROM operations o
+    JOIN shares s ON o.operation_id = s.operation_id
+    WHERE s.receiver_id = ?;
+  `;
+  db.query(query, [user_id, user_id], (err, results) => {
+    if (err) {
+      console.error('Error retrieving operations:', err);
       res.status(500).send('Server error');
     } else {
       res.json(results);

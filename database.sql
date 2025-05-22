@@ -78,31 +78,27 @@ INSERT INTO categories (name) VALUES
 ('Salary'),
 ('Other');
 
--- Insert fake operations (use only the above categories)
+-- Insert fake operations (spendings are negative, gains are positive)
 INSERT INTO operations (amount, category, label, date, payer_id) VALUES
-(50.00, 'Groceries', 'Supermarket', '2024-05-01', 1),
-(30.00, 'Transport', 'Gas', '2024-05-02', 2),
-(80.00, 'Dining', 'Restaurant', '2024-05-03', 3),
-(45.00, 'Entertainment', 'Cinema', '2024-05-04', 4),
-(60.00, 'Shopping', 'Market', '2024-05-05', 5),
-(25.00, 'Health', 'Pharmacy', '2024-05-06', 2),
-(100.00, 'Rent', 'Monthly Rent', '2024-05-07', 3),
-(15.00, 'Subscriptions', 'Music Service', '2024-05-08', 4),
-(40.00, 'Pets', 'Vet Visit', '2024-05-09', 5),
+(-50.00, 'Groceries', 'Supermarket', '2024-05-01', 1),
+(-30.00, 'Transport', 'Gas', '2024-05-02', 2),
+(-80.00, 'Dining', 'Restaurant', '2024-05-03', 3),
+(-45.00, 'Entertainment', 'Cinema', '2024-05-04', 4),
+(-60.00, 'Shopping', 'Market', '2024-05-05', 5),
+(-25.00, 'Health', 'Pharmacy', '2024-05-06', 2),
+(-100.00, 'Rent', 'Monthly Rent', '2024-05-07', 3),
+(-15.00, 'Subscriptions', 'Music Service', '2024-05-08', 4),
+(-40.00, 'Pets', 'Vet Visit', '2024-05-09', 5),
 (1200.00, 'Salary', 'Monthly Salary', '2024-05-10', 1);
 
 -- Insert fake shares
 INSERT INTO shares (receiver_id, operation_id, percentage) VALUES
-(1, 1, 50),
-(2, 1, 50),
-(2, 2, 60),
-(3, 2, 40),
-(1, 3, 30),
-(3, 3, 70),
-(4, 4, 70),
-(5, 4, 30),
-(5, 5, 50),
-(6, 5, 50);
+(2, 1, 50),  -- Bob shares in Alice's operation
+(3, 2, 40),  -- Carol shares in Bob's operation
+(1, 3, 30),  -- Alice shares in Carol's operation
+(5, 4, 30),  -- Frank shares in David's operation
+(5, 5, 50),  -- Frank shares in Emma's operation
+(6, 5, 50);  -- Grace shares in Emma's operation
 
 -- Insert fake friendships
 INSERT INTO befriend (user_id, friend_id) VALUES
