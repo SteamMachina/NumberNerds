@@ -335,7 +335,7 @@ app.post('/shares', (req, res) => {
 
                 db.query(
                   updateOwedMoney,
-                  [percentage, operation_amount, receiver_id, operation_id, receiver_id, operation_id],
+                  [percentage, -operation_amount, receiver_id, operation_id, receiver_id, operation_id],
                   (err, results) => {
                     if (err) {
                       console.error('Error updating owed money:', err);
