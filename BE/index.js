@@ -318,32 +318,56 @@ app.post('/shares', (req, res) => {
               } else {
                 res.status(201).send('Share added successfully');
                 // Update owed money for both users
-                const updateOwedMoney = `
-                  UPDATE befriend
-                  SET owed_money = owed_money + (? / 100 * ?)
-                  WHERE user_id = ? AND friend_id = (
-                    SELECT payer_id FROM operations WHERE operation_id = ?
-                  );
+                db.query('SELECT amount, payer_id FROM operations WHERE operation_id = ?', [operation_id], (err, opResults) => {
+                  if (err) {
+                    console.error('Error retrieving operation amount:', err);
+                    res.status(500).send('Server error');
+                  } else if (opResults.length === 0) {
+                    res.status(404).send('Operation not found');
+                  } else {
+                    const operation_amount = opResults[0].amount;
+                    const payer_id = opResults[0].payer_id;
 
-                  UPDATE befriend b1
-                  JOIN befriend b2 ON b1.user_id = b2.friend_id AND b1.friend_id = b2.user_id
-                  SET b2.owed_money = -b1.owed_money
-                  WHERE b1.user_id = ? AND b1.friend_id = (
-                    SELECT payer_id FROM operations WHERE operation_id = ?
-                  );
-                `;
-
-                db.query(
-                  updateOwedMoney,
-                  [percentage, -operation_amount, receiver_id, operation_id, receiver_id, operation_id],
-                  (err, results) => {
-                    if (err) {
-                      console.error('Error updating owed money:', err);
-                    } else {
-                      console.log('Owed money incremented successfully (both directions)');
-                    }
+                    // Ensure befriend entries exist before updating owed_money
+                    db.query(
+                      'INSERT IGNORE INTO befriend (user_id, friend_id) VALUES (?, ?), (?, ?)',
+                      [receiver_id, payer_id, payer_id, receiver_id],
+                      (err) => {
+                        if (err) {
+                          console.error('Error ensuring befriend entries:', err);
+                        }
+                        // First update: increment owed_money for the share
+                        db.query(
+                          `UPDATE befriend
+                          SET owed_money = owed_money + (? / 100 * ?)
+                          WHERE user_id = ? AND friend_id = ?;`,
+                          [percentage, operation_amount, receiver_id, payer_id],
+                          (err, results) => {
+                            if (err) {
+                              console.error('Error updating owed money:', err);
+                            } else {
+                              // Second update: sync the reverse direction
+                              db.query(
+                                `UPDATE befriend b1
+                                JOIN befriend b2 ON b1.user_id = b2.friend_id AND b1.friend_id = b2.user_id
+                                SET b2.owed_money = -b1.owed_money
+                                WHERE b1.user_id = ? AND b1.friend_id = ?;`,
+                                [receiver_id, payer_id],
+                                (err, results) => {
+                                  if (err) {
+                                    console.error('Error updating owed money (reverse):', err);
+                                  } else {
+                                    console.log('Owed money incremented successfully (both directions)');
+                                  }
+                                }
+                              );
+                            }
+                          }
+                        );
+                      }
+                    );
                   }
-                );
+                });
               }
             }
           );
@@ -388,6 +412,31 @@ app.get('/operations/:user_id', (req, res) => {
       res.status(500).send('Server error');
     } else {
       res.json(results);
+    }
+  });
+});
+
+// Delete a share
+app.delete('/shares/:share_id', (req, res) => {
+  const { share_id } = req.params;
+  // Check if share exists
+  db.query('SELECT * FROM shares WHERE share_id = ?', [share_id], (err, results) => {
+    if (err) {
+      console.error('Error checking if share exists:', err);
+      res.status(500).send('Server error');
+    } else if (results.length === 0) {
+      res.status(404).send('Share not found');
+    } else {
+      // Restore owed money for both users
+      // Delete share from the database
+      db.query('DELETE FROM shares WHERE share_id = ?', [share_id], (err, results) => {
+        if (err) {
+          console.error('Error deleting share:', err);
+          res.status(500).send('Server error');
+        } else {
+          res.status(200).send('Share deleted successfully');
+        }
+      });
     }
   });
 });

@@ -91,15 +91,6 @@ INSERT INTO operations (amount, category, label, date, payer_id) VALUES
 (-40.00, 'Pets', 'Vet Visit', '2024-05-09', 5),
 (1200.00, 'Salary', 'Monthly Salary', '2024-05-10', 1);
 
--- Insert fake shares
-INSERT INTO shares (receiver_id, operation_id, percentage) VALUES
-(2, 1, 50),  -- Bob shares in Alice's operation
-(3, 2, 40),  -- Carol shares in Bob's operation
-(1, 3, 30),  -- Alice shares in Carol's operation
-(5, 4, 30),  -- Frank shares in David's operation
-(5, 5, 50),  -- Frank shares in Emma's operation
-(6, 5, 50);  -- Grace shares in Emma's operation
-
 -- Insert fake friendships
 INSERT INTO befriend (user_id, friend_id) VALUES
 (1, 2), (2, 1),
