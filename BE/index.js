@@ -193,6 +193,30 @@ app.post('/category', (req, res) => {
   });
 });
 
+// Edit an existing category
+app.post('/category', (req, res) => {
+  const { name } = req.body;
+  // Check if category already exists
+  db.query('SELECT * FROM categories WHERE name = ?', [name], (err, results) => {
+    if (err) {
+      console.error('Error checking if category exists:', err);
+      res.status(500).send('Server error');
+    } else if (results.length > 0) {
+      res.status(400).send('Category already exists');
+    } else {
+      // Add category to the database
+      db.query('INSERT INTO categories (name) VALUES (?)', [name], (err, results) => {
+        if (err) {
+          console.error('Error adding category:', err);
+          res.status(500).send('Server error');
+        } else {
+          res.status(201).send('Category added successfully');
+        }
+      });
+    }
+  });
+});
+
 // Delete a category by name
 app.delete('/category/:name', (req, res) => {
   const { name } = req.params;
