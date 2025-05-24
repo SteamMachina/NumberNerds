@@ -416,25 +416,67 @@ app.get('/operations/:user_id', (req, res) => {
   });
 });
 
-// Delete a share
-app.delete('/shares/:share_id', (req, res) => {
-  const { share_id } = req.params;
+// Delete a share by operation_id and receiver_id (use both as URL params)
+app.delete('/shares/:operation_id/:receiver_id', (req, res) => {
+  const { operation_id, receiver_id } = req.params;
   // Check if share exists
-  db.query('SELECT * FROM shares WHERE share_id = ?', [share_id], (err, results) => {
+  db.query('SELECT * FROM shares WHERE receiver_id = ? AND operation_id = ?;', [receiver_id, operation_id], (err, shareResults) => {
     if (err) {
       console.error('Error checking if share exists:', err);
       res.status(500).send('Server error');
-    } else if (results.length === 0) {
+    } else if (shareResults.length === 0) {
       res.status(404).send('Share not found');
     } else {
-      // Restore owed money for both users
-      // Delete share from the database
-      db.query('DELETE FROM shares WHERE share_id = ?', [share_id], (err, results) => {
+      const { percentage } = shareResults[0];
+      // Retrieve operation details
+      db.query('SELECT amount, payer_id FROM operations WHERE operation_id = ?', [operation_id], (err, opResults) => {
         if (err) {
-          console.error('Error deleting share:', err);
+          console.error('Error retrieving operation amount:', err);
           res.status(500).send('Server error');
+        } else if (opResults.length === 0) {
+          res.status(404).send('Operation not found');
         } else {
-          res.status(200).send('Share deleted successfully');
+          // Restore owed money for the payer
+          const operation_amount = opResults[0].amount;
+          const payer_id = opResults[0].payer_id;
+
+          db.query(
+            `UPDATE befriend
+             SET owed_money = owed_money - (? / 100 * ?)
+             WHERE user_id = ? AND friend_id = ?;`,
+            [percentage, operation_amount, receiver_id, payer_id],
+            (err, results) => {
+              if (err) {
+                console.error('Error updating owed money:', err);
+                res.status(500).send('Server error');
+              } else {
+                // Restore owed money for the receiver
+                db.query(
+                  `UPDATE befriend b1
+                   JOIN befriend b2 ON b1.user_id = b2.friend_id AND b1.friend_id = b2.user_id
+                   SET b2.owed_money = -b1.owed_money
+                   WHERE b1.user_id = ? AND b1.friend_id = ?;`,
+                  [receiver_id, payer_id],
+                  (err, results) => {
+                    if (err) {
+                      console.error('Error updating owed money (reverse):', err);
+                      res.status(500).send('Server error');
+                    } else {
+                      // Delete share from the database
+                      db.query('DELETE FROM shares WHERE receiver_id = ? AND operation_id = ?', [receiver_id, operation_id], (err, results) => {
+                        if (err) {
+                          console.error('Error deleting share:', err);
+                          res.status(500).send('Server error');
+                        } else {
+                          res.status(200).send('Share deleted successfully');
+                        }
+                      });
+                    }
+                  }
+                );
+              }
+            }
+          );
         }
       });
     }
