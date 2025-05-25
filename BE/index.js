@@ -193,30 +193,6 @@ app.post('/category', (req, res) => {
   });
 });
 
-// Edit an existing category
-app.post('/category', (req, res) => {
-  const { name } = req.body;
-  // Check if category already exists
-  db.query('SELECT * FROM categories WHERE name = ?', [name], (err, results) => {
-    if (err) {
-      console.error('Error checking if category exists:', err);
-      res.status(500).send('Server error');
-    } else if (results.length > 0) {
-      res.status(400).send('Category already exists');
-    } else {
-      // Add category to the database
-      db.query('INSERT INTO categories (name) VALUES (?)', [name], (err, results) => {
-        if (err) {
-          console.error('Error adding category:', err);
-          res.status(500).send('Server error');
-        } else {
-          res.status(201).send('Category added successfully');
-        }
-      });
-    }
-  });
-});
-
 // Delete a category by name
 app.delete('/category/:name', (req, res) => {
   const { name } = req.params;
@@ -498,6 +474,57 @@ app.delete('/shares/:operation_id/:receiver_id', (req, res) => {
                     }
                   }
                 );
+              }
+            }
+          );
+        }
+      });
+    }
+  });
+});
+
+// Edit an operation
+app.put('/operations', (req, res) => {
+  const { operation_id, amount, category, label, date } = req.body;
+
+  // Check if operation exists in the database
+  db.query('SELECT * FROM operations WHERE operation_id = ?', [operation_id], (err, results) => {
+    if (err) {
+      console.error('Error retrieving operation:', err);
+      res.status(500).send('Server error');
+    } else if (results.length === 0) {
+      res.status(404).send('Operation not found');
+    } else {
+      // Check if category exists
+      db.query('SELECT * FROM categories WHERE name = ?', [category], (err, results) => {
+        if (err) {
+          console.error('Error checking if category exists:', err);
+          res.status(500).send('Server error');
+        } else if (results.length === 0) {
+          res.status(404).send('Category not found');
+        } else {
+          // Update operation in the database
+          db.query(
+            'UPDATE operations SET amount = ?, category = ?, label = ?, date = ? WHERE operation_id = ?',
+            [amount, category, label, date, operation_id],
+            (err, results) => {
+              if (err) {
+                console.error('Error adding operation:', err);
+                res.status(500).send('Server error');
+              } else {
+                res.status(201).send('Operation added successfully');
+                // Update shares if the amount has changed
+                if (amount !== results[0].amount) {
+                  // Get all shares for this operation
+                  db.query('SELECT * FROM shares WHERE operation_id = ?', [operation_id], (err, shareResults) => {
+                    if (err) {
+                      console.error('Error retrieving shares:', err);
+                      res.status(500).send('Server error');
+                    } else {
+                      // 
+                    }
+                  });
+                }
               }
             }
           );
