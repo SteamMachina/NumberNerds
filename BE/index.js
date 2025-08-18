@@ -411,6 +411,10 @@ app.get('/operations/:user_id', (req, res) => {
       console.error('Error retrieving operations:', err);
       res.status(500).send('Server error');
     } else {
+      // Format the date to YYYY-MM-DD
+      results.forEach(op => {
+        op.date = op.date.toISOString().substring(0, 10);
+      });
       res.json(results);
     }
   });
@@ -495,6 +499,9 @@ app.put('/operations', (req, res) => {
     } else if (results.length === 0) {
       res.status(404).send('Operation not found');
     } else {
+      // Saving original amount
+      const original_amount = results[0].amount;
+      const payer_id = results[0].payer_id;
       // Check if category exists
       db.query('SELECT * FROM categories WHERE name = ?', [category], (err, results) => {
         if (err) {
@@ -512,16 +519,32 @@ app.put('/operations', (req, res) => {
                 console.error('Error adding operation:', err);
                 res.status(500).send('Server error');
               } else {
-                res.status(201).send('Operation added successfully');
                 // Update shares if the amount has changed
-                if (amount !== results[0].amount) {
+                if (amount !== original_amount) {
                   // Get all shares for this operation
                   db.query('SELECT * FROM shares WHERE operation_id = ?', [operation_id], (err, shareResults) => {
                     if (err) {
                       console.error('Error retrieving shares:', err);
                       res.status(500).send('Server error');
                     } else {
-                      // 
+                      shareResults.forEach(share => {
+                        const originaly_owed = share.percentage * original_amount;
+                        const newly_owed = share.percentage * amount;
+                        const owed_difference = originaly_owed - newly_owed;
+
+                        db.query(
+                          `UPDATE befriend
+                          SET owed_money = owed_money - ?
+                          WHERE user_id = ? AND friend_id = ?;`,
+                          [owed_difference, share.receiver_id, payer_id],
+                          (err, results) => {
+                            if (err) {
+                              console.error('Error updating owed money:', err);
+                              res.status(500).send('Server error');
+                            }
+                          }
+                        )
+                      });
                     }
                   });
                 }
@@ -529,10 +552,14 @@ app.put('/operations', (req, res) => {
             }
           );
         }
+        res.status(201).send('Shares updated successfully');
       });
     }
   });
 });
+
+// modify share
+
 
 /************** */
 /* START SERVER */
