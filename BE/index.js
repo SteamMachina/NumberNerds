@@ -246,7 +246,20 @@ app.post('/operations', (req, res) => {
                 console.error('Error adding operation:', err);
                 res.status(500).send('Server error');
               } else {
-                res.status(201).send('Operation added successfully');
+                // modify total_money in users
+                db.query(
+                  `UPDATE users
+                  SET total_money = total_money - ?
+                  WHERE user_id = ?;`,
+                  [amount, payer_id],
+                  (err, results) => {
+                    if (err) {
+                      console.error('Error updating total money:', err);
+                    } else {
+                      res.status(200).send('Operation added successfully');
+                    }
+                  }
+                );
               }
             }
           );
@@ -267,23 +280,36 @@ app.delete('/operations/:operation_id', (req, res) => {
     } else if (results.length === 0) {
       res.status(404).send('Operation not found');
     } else {
-      // Delete operation from shares table
-      db.query('DELETE FROM shares WHERE operation_id = ?', [operation_id], (err, results) => {
-        if (err) {
-          console.error('Error deleting operation from shares:', err);
-          res.status(500).send('Server error');
-        } else {
-          // Delete operation from the operations table
-          db.query('DELETE FROM operations WHERE operation_id = ?', [operation_id], (err, results) => {
-            if (err) {
-              console.error('Error deleting operation:', err);
-              res.status(500).send('Server error');
-            } else {
-              res.status(200).send('Operation deleted successfully');
-            }
-          });
+      // update total_money in users
+      db.query(
+        `UPDATE users
+        SET total_money = total_money + ?
+        WHERE user_id = ?;`,
+        [results[0].amount, results[0].payer_id],
+        (err, updateResults) => {
+          if (err) {
+            console.error('Error updating total money:', err);
+          } else {
+            // Delete operation from shares table
+            db.query('DELETE FROM shares WHERE operation_id = ?', [operation_id], (err, shareResults) => {
+              if (err) {
+                console.error('Error deleting operation from shares:', err);
+                res.status(500).send('Server error');
+              } else {
+                // Delete operation from the operations table
+                db.query('DELETE FROM operations WHERE operation_id = ?', [operation_id], (err, deleteResults) => {
+                  if (err) {
+                    console.error('Error deleting operation:', err);
+                    res.status(500).send('Server error');
+                  } else {
+                    res.status(200).send('Operation deleted successfully');
+                  }
+                });
+              }
+            });
+          }
         }
-      });
+      );
     }
   });
 });
@@ -547,8 +573,32 @@ app.put('/operations', (req, res) => {
   });
 });
 
-// modify share
+// display the total_money of a user
+app.get('/profil/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const query = `
+    SELECT user_id, email, name, total_money
+    FROM users
+    WHERE user_id = ?;`;
 
+  db.query(query, [user_id], (err, results) => {
+    if (err) {
+      console.error('Error retrieving user information:', err);
+      res.status(500).send('Server error');
+    } else {
+      res.json(results);
+    }
+  });
+});
+
+// register
+/* modify total_money in users for each function :
+  - Edit an operation
+  - Delete a share
+  - Create a new share
+*/
+
+// check that delete an operation updates owed_money
 
 /************** */
 /* START SERVER */
