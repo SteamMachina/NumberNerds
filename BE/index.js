@@ -542,32 +542,55 @@ app.put('/operations', (req, res) => {
                       console.error('Error retrieving shares:', err);
                       res.status(500).send('Server error');
                     } else {
-                      shareResults.forEach(share => {
-                        const originaly_owed = (share.percentage / 100) * original_amount;
-                        const newly_owed = (share.percentage / 100) * amount;
-                        const owed_difference = originaly_owed - newly_owed;
-
-                        db.query(
-                          `UPDATE befriend
-                          SET owed_money = owed_money - ?
-                          WHERE user_id = ? AND friend_id = ?;`,
-                          [owed_difference, share.receiver_id, payer_id],
-                          (err, results) => {
-                            if (err) {
-                              console.error('Error updating owed money:', err);
-                              res.status(500).send('Server error');
-                            }
+                      // since amount changed, we also need to update total_money in users
+                      db.query(
+                        `UPDATE users
+                        SET total_money = total_money + ? - ?
+                        WHERE user_id = ?;`,
+                        [original_amount, amount, payer_id],
+                        (err, results) => {
+                          if (err) {
+                            console.error('Error updating total money:', err);
+                            return res.status(500).send('Server error');
                           }
-                        )
-                      });
+                          if (!shareResults || shareResults.length === 0) {
+                            return res.status(201).send('Operation updated successfully');
+                          }
+                          let completed = 0;
+                          let hasError = false;
+                          shareResults.forEach(share => {
+                            const originaly_owed = (share.percentage / 100) * original_amount;
+                            const newly_owed = (share.percentage / 100) * amount;
+                            const owed_difference = originaly_owed - newly_owed;
+                            db.query(
+                              `UPDATE befriend
+                              SET owed_money = owed_money - ?
+                              WHERE user_id = ? AND friend_id = ?;`,
+                              [owed_difference, share.receiver_id, payer_id],
+                              (err, results) => {
+                                if (err && !hasError) {
+                                  hasError = true;
+                                  console.error('Error updating owed money:', err);
+                                  return res.status(500).send('Server error');
+                                }
+                                completed++;
+                                if (completed === shareResults.length && !hasError) {
+                                  return res.status(201).send('Operation updated successfully');
+                                }
+                              }
+                            );
+                          });
+                        }
+                      );
                     }
                   });
+                } else {
+                  res.status(201).send('Operation updated successfully');
                 }
               }
             }
           );
         }
-        res.status(201).send('Shares updated successfully');
       });
     }
   });
@@ -593,7 +616,6 @@ app.get('/profil/:user_id', (req, res) => {
 
 // register
 /* modify total_money in users for each function :
-  - Edit an operation
   - Delete a share
   - Create a new share
 */
