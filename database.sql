@@ -10,7 +10,7 @@ CREATE TABLE users (
    email VARCHAR(50) NOT NULL UNIQUE,
    password_hash VARCHAR(255) NOT NULL,
    name VARCHAR(50) NOT NULL,
-   total_money DECIMAL(10,2) NOT NULL
+   total_money DECIMAL(10,2) NOT NULL DEFAULT 0.00
 );
 
 CREATE TABLE categories (
@@ -92,11 +92,23 @@ INSERT INTO operations (amount, category, label, date, payer_id) VALUES
 (1200.00, 'Salary', 'Monthly Salary', '2024-05-10', 1);
 
 -- Insert fake friendships
-INSERT INTO befriend (user_id, friend_id) VALUES
-(1, 2), (2, 1),
-(2, 3), (3, 2),
-(1, 3), (3, 1),
-(4, 5), (5, 4),
-(5, 6), (6, 5),
-(6, 7), (7, 6),
-(4, 7), (7, 4);
+
+-- Trigger to update owed_money in befriend when a share is deleted
+DELIMITER //
+CREATE TRIGGER after_share_delete
+AFTER DELETE ON shares
+FOR EACH ROW
+BEGIN
+   DECLARE op_amount DECIMAL(10,2);
+   DECLARE payer INT;
+   DECLARE owed DECIMAL(10,2);
+   -- Get the amount and payer for the operation
+   SELECT amount, payer_id INTO op_amount, payer FROM operations WHERE operation_id = OLD.operation_id;
+   -- Calculate the owed amount (respect sign of operation)
+   SET owed = op_amount * (OLD.percentage / 100);
+   -- Update the befriend table: receiver owes less to payer
+   UPDATE befriend
+   SET owed_money = owed_money - owed
+   WHERE user_id = OLD.receiver_id AND friend_id = payer;
+END;//
+DELIMITER ;
